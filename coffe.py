@@ -74,7 +74,7 @@ parser.add_argument('-q', '--quick_mode', type=float, default=-1.0, help="minimu
 args = parser.parse_args()
 
 # Load the input architecture description file
-coffe_params = utils.load_params(args.arch_description,args)
+coffe_params = utils.load_params_yaml(args.arch_description,args)
 
 # Make the top-level spice folder if it doesn't already exist
 # if it's already there delete its content

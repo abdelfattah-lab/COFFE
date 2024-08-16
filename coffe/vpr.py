@@ -1,6 +1,23 @@
 import sys
 import os
 
+def get_vpr_dict(fpga_inst):
+	def calc_mwta(val, minimum=1.0):
+		return max(val / fpga_inst.spec.min_width_tran_area, minimum)
+	
+	return dict(
+		Tdel = fpga_inst.sb_mux.delay,
+		T_ipin_cblock = fpga_inst.cb_mux.delay,
+		T_local_CLB_routing = fpga_inst.logic_cluster.local_mux.delay,
+		T_local_feedback = fpga_inst.logic_cluster.ble.local_output.delay,
+		T_logic_block_output = fpga_inst.logic_cluster.ble.general_output.delay,
+		mwta_clb = calc_mwta(fpga_inst.area_dict["logic_cluster"]),
+		mwta_ipin_mux_trans = calc_mwta(fpga_inst.area_dict["ipin_mux_trans_size"]),
+		mwta_switch_mux_trans = calc_mwta(fpga_inst.area_dict["switch_mux_trans_size"]),
+		mwta_switch_buf = calc_mwta(fpga_inst.area_dict["switch_buf_size"]),
+		mwta_cb_buf = calc_mwta(fpga_inst.area_dict["cb_buf_size"]),
+	)
+
 def print_vpr_file_memory(vpr_file, fpga_inst):
 
 	# get delay values

@@ -1061,14 +1061,18 @@ class _LUT(_SizableCircuit):
         if self.use_fluts:
             tempK = self.K - 1
 
+        init_tran_sizes = None
+
         if tempK == 6:
             init_tran_sizes = self._generate_6lut(subcircuit_filename, min_tran_width, self.use_tgate, self.use_finfet, self.use_fluts)
         elif tempK == 5:
             init_tran_sizes = self._generate_5lut(subcircuit_filename, min_tran_width, self.use_tgate, self.use_finfet, self.use_fluts)
         elif tempK == 4:
             init_tran_sizes = self._generate_4lut(subcircuit_filename, min_tran_width, self.use_tgate, self.use_finfet, self.use_fluts)
-
-  
+        
+        if init_tran_sizes is None:
+            raise ValueError(f"Could not initialize transistor sizes for LUT size {self.K}.")
+    
         return init_tran_sizes
 
 

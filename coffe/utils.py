@@ -3,7 +3,8 @@ import os
 import shutil
 import time 
 import datetime
-
+from copy import deepcopy
+import pandas as pd
 import re
 import yaml
 
@@ -478,8 +479,45 @@ def print_vpr_areas(report_file, fpga_inst):
     print_and_write(report_file, "  buf_size (routing switch)".ljust(50) + str(fpga_inst.area_dict["switch_buf_size"]/fpga_inst.specs.min_width_tran_area))
     print_and_write(report_file, "")
 
+def load_params_yaml(filename, run_options):
+    #get values from yaml file
+    with open(filename, 'r') as file:
+        param_dict = yaml.safe_load(file)
     
-def load_params(filename,run_options):
+    return load_params_from_dict(filename, param_dict, run_options)
+
+def load_params_coffe_maker(record_file_path, run_options):
+    """
+    Returns a list of (non-COFFE columns as dictionary, COFFE params).
+    """
+    # split DataFrames
+    records = pd.read_csv(record_file_path)
+    rem_cols = records.loc[:, ~records.columns.str.startswith('coffe_')]
+    coffe_cols = records.loc[:, records.columns.str.startswith('coffe_')]
+
+    # remove 'coffe_' prefix
+    coffe_cols.columns = coffe_cols.columns.str.replace('coffe_', '')
+    # make list
+    ret = []
+    for rem, params in zip(rem_cols.itertuples(index=False, name='Rem'), coffe_cols.itertuples(index=False, name='Coffe')):
+        arch_params_dict = params._asdict()
+
+        # collapse 'metal' layers
+        arch_params_dict['metal'] = []
+        for i in range(int(arch_params_dict['metal_count'])):
+            r, c = arch_params_dict[f'metal{i}'].split(',')
+            arch_params_dict['metal'].append((float(r.strip()), float(c.strip())))
+            del arch_params_dict[f'metal{i}']
+        del arch_params_dict['metal_count']
+
+        # pass through checker
+        coffe_params = load_params_from_dict(record_file_path, dict(fpga_arch_params=deepcopy(arch_params_dict)), run_options)
+        ret.append((rem._asdict(), coffe_params))
+    
+    return ret
+
+
+def load_params_from_dict(filename, param_dict, run_options):
     run_params = {
         "param_filters" : {},
         "synth": {},
@@ -623,9 +661,6 @@ def load_params(filename,run_options):
     #top level param types
     param_type_names = ["fpga_arch_params","asic_hardblock_params"]
     hb_sub_param_type_names = ["hb_run_params","ptn_params"]#"asic_partition_params"]
-    #get values from yaml file
-    with open(filename, 'r') as file:
-        param_dict = yaml.safe_load(file)
 
     #check to see if the input settings file is a subset of defualt params
     for key in arch_params.keys():
