@@ -3,7 +3,7 @@ import os
 
 def get_vpr_dict(fpga_inst):
 	def calc_mwta(val, minimum=1.0):
-		return max(val / fpga_inst.spec.min_width_tran_area, minimum)
+		return max(val / fpga_inst.specs.min_width_tran_area, minimum)
 	
 	return dict(
 		Tdel = fpga_inst.sb_mux.delay,
