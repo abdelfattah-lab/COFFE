@@ -193,7 +193,7 @@ def queue_job(output_dir, i, pair):
     os.makedirs(arch_folder)
     
     # Run job
-    archive = arch_vars | job(coffe_params, arch_folder)
+    archive = {**arch_vars, **job(coffe_params, arch_folder)}
     
     print(archive)
     return archive
