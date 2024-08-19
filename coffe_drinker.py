@@ -205,7 +205,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 # Read in DataFrame
 record = pd.read_csv(record_file_path)
-executor = ProcessPoolExecutor(max_workers=24)
+executor = ProcessPoolExecutor(max_workers=16)
 jobs = [executor.submit(queue_job, output_dir, i, pair) for i, pair in enumerate(utils.load_params_coffe_maker(record_file_path, args))]
 
 # Run all jobs
