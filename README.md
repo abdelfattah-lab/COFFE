@@ -22,3 +22,7 @@ If you would like to run in background, a simple command to use would be:
     - `coffe.py` would be the usual COFFE 2.0 script for a single job.
     - `coffe_drinker.py` would be the COFFE drinker that runs COFFE jobs in parallel according to a COFFE maker record file (please see the `Kratos-explorer` repository).
 - `<out_file>`: log file where `stdout` will be redirected to (i.e., terminal messages); normal convention would be `*.out`.
+
+The terminal output of this will show you the parent process' PID.
+If you need to terminate all jobs for whatever reason, then you can kill the parent process and all child processes with:
+`pkill -P <parent PID>`
