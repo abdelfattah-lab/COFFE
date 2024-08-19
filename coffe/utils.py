@@ -512,7 +512,7 @@ def load_params_coffe_maker(record_file_path, run_options):
 
         # pass through checker
         coffe_params = load_params_from_dict(record_file_path, dict(fpga_arch_params=deepcopy(arch_params_dict)), run_options)
-        ret.append((rem._asdict(), coffe_params))
+        ret.append((dict(rem._asdict()), coffe_params))
     
     return ret
 
