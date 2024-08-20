@@ -3,6 +3,7 @@
 ###############################################################
 # Use Kratos-explorer's coffe_maker.py to generate the required record file.
 
+from datetime import datetime as dt
 import os, shutil
 import sys
 import argparse
@@ -58,6 +59,9 @@ parser.add_argument('-r',"--parse_pll_hb_flow",help="parses the hardblock flow f
 parser.add_argument('-q', '--quick_mode', type=float, default=-1.0, help="minimum cost function improvement for resizing")
 
 args = parser.parse_args()
+
+# Log start time
+log(f"Started execution at {dt.now().strftime('%d %b %Y, %I:%M:%S %p')}.")
 
 # Check for coffe_maker record
 record_file_path = args.record_file
