@@ -26,3 +26,10 @@ If you would like to run in background, a simple command to use would be:
 The terminal output of this will show you the parent process' PID.
 If you need to terminate all jobs for whatever reason, then you can kill the parent process and all child processes with:
 `pkill -P <parent PID>`
+
+## COFFE Drinker
+
+This repository contains `coffe_drinker.py`, which is intended to be used with `Kratos-explorer`'s `coffe_maker.py` in the following steps:
+1. Use the `maker` to generate a `record.csv` file for all COFFE jobs to run, based on architecture and parameters.
+2. Use the `drinker` to run all COFFE jobs in multiple processes, and generate an archive `.csv` file.
+3. Insert this archive file at the appropriate location in `Kratos-explorer` so the `ArchFactory`s can look up historical COFFE estimates when required. 
