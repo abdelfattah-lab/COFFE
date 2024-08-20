@@ -32,6 +32,8 @@ def log(message):
 def log_error(message):
     print(f"[ERR] {message}")
     exit()
+def get_time_str(time_now):
+   return time_now.strftime('%d %b %Y, %I:%M:%S %p')
 
 ##################
 # Argument Parsing
@@ -61,7 +63,9 @@ parser.add_argument('-q', '--quick_mode', type=float, default=-1.0, help="minimu
 args = parser.parse_args()
 
 # Log start time
-log(f"Started execution at {dt.now().strftime('%d %b %Y, %I:%M:%S %p')}.")
+start_time = dt.now()
+log(f"Started execution at {get_time_str(start_time)}.")
+time_folder = start_time.strftime('%d%b%Y_%H-%M-%S')
 
 # Check for coffe_maker record
 record_file_path = args.record_file
@@ -204,12 +208,12 @@ def queue_job(output_dir, i, pair):
 
 # Make output directory
 output_dir = os.path.abspath(os.path.dirname(record_file_path))
-output_dir = os.path.join(output_dir, 'coffe_drinker_out')
+output_dir = os.path.join(output_dir, 'coffe_drinker_out', time_folder)
 os.makedirs(output_dir, exist_ok=True)
 
 # Read in DataFrame
 record = pd.read_csv(record_file_path)
-executor = ProcessPoolExecutor(max_workers=16)
+executor = ProcessPoolExecutor(max_workers=24)
 jobs = [executor.submit(queue_job, output_dir, i, pair) for i, pair in enumerate(utils.load_params_coffe_maker(record_file_path, args))]
 
 # Run all jobs
@@ -230,4 +234,6 @@ for i, job in enumerate(as_completed(jobs)):
 output_path = os.path.join(output_dir, f"{args.output_file}.csv")
 log(f"Now writing all results to {output_path}...")
 pd.DataFrame.from_records(archive_entries).to_csv(output_path)
-log(f"Completed -> {output_path}. Have a nice day!")
+log(f"Completed all jobs at {get_time_str(dt.now())}.")
+log(f"Generated archive file @ {output_path}.")
+log("Have a nice day!")
