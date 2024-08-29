@@ -3,6 +3,8 @@
 ###############################################################
 # Use Kratos-explorer's coffe_maker.py to generate the required record file.
 
+from tools.logging import *
+
 from datetime import datetime as dt
 import os, shutil
 import sys
@@ -22,18 +24,6 @@ print ("\nCOFFE Drinker\n")
 print ("Man is man.")
 print ("Without man he is nothing, with man he is all.")
 print ("                                   - A Man\n\n")
-
-###############
-# Log Functions
-###############
-
-def log(message):
-    print(f"(!) {message}")
-def log_error(message):
-    print(f"[ERR] {message}")
-    exit()
-def get_time_str(time_now):
-   return time_now.strftime('%d %b %Y, %I:%M:%S %p')
 
 ##################
 # Argument Parsing
