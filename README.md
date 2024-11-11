@@ -7,3 +7,7 @@ If you make changes to COFFE, run the test.pl script to do some basic checks tha
 
 How to cite:  
 [Sadegh to fill in].
+
+# Update mode 10
+
+Set updates=10 in the input .txt file to `coffe.py` to model the LUT skip architecture.
