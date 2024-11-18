@@ -417,7 +417,7 @@ def generate_flut_output_load(spice_filename, enable_carry_chain, updates):
     if enable_carry_chain:
         #JUNIUS - connect to CC MUX instead for LUT Skip (mode 10)
         if updates == 10:
-            spice_file.write(utils.create_wire("n_in", "n_cc", "lut", "flut_cc_mux"))
+            spice_file.write(utils.create_wire("n_in", "n_mcc", "lut", "flut_cc_mux"))
             spice_file.write("Xflutccmux n_mcc n_mcc_out n_g_mcc n_gnd n_vdd_mcc n_gnd flut_cc_mux\n")
             spice_file.write("Xflutccmux_load n_mcc_out ncout nsumout n_vdd n_gnd n_vdd_cc flut_cc_mux_load\n\n")
         else:
