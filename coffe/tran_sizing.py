@@ -331,7 +331,9 @@ def get_eval_delay(fpga_inst, opt_type, subcircuit, tfall, trise, low_voltage, i
 		# Adding two adders per ALM to the critical path
 		elif fpga_inst.specs.updates == 4:
 			path_delay +=  (fpga_inst.specs.N * fpga_inst.specs.FAs_per_flut - 2) * fpga_inst.carrychain.delay
-
+		#JUNIUS - add delay for AD Local Mux and FLUT CC Mux in LUT Skip (mode 10) to critical path
+		elif fpga_inst.specs.updates == 10:
+			path_delay += fpga_inst.logic_cluster.adder_direct_local_mux.delay + fpga_inst.logic_cluster.ble.flut_cc_mux.delay
 		return path_delay
 
 		
@@ -349,7 +351,7 @@ def get_eval_delay(fpga_inst, opt_type, subcircuit, tfall, trise, low_voltage, i
 		# Connection block
 		path_delay += fpga_inst.cb_mux.delay*fpga_inst.cb_mux.delay_weight
 		# Local mux
-		path_delay += fpga_inst.logic_cluster.local_mux.delay*fpga_inst.logic_cluster.local_mux.delay_weight
+		path_delay += fpga_inst.logic_cluster.local_mux.delay*fpga_inst.logic_cluster.local_mux.delay_weight		
 		# LUT
 		path_delay += fpga_inst.logic_cluster.ble.lut.delay*fpga_inst.logic_cluster.ble.lut.delay_weight
 		# LUT input drivers
