@@ -514,7 +514,7 @@ def load_arch_params(filename):
         
         # Split lines at '='
         words = line.split('=')
-        if words[0] not in arch_params.keys():
+        if words[0] not in arch_params.keys() and words[0] not in ['Z', 'sneak_paths', 'Fc_ad']:
             print "ERROR: Found invalid architecture parameter (" + words[0] + ") in " + filename
             sys.exit()
          
@@ -544,6 +544,15 @@ def load_arch_params(filename):
             arch_params['Ofb'] = int(value)
         elif param == 'Fclocal':
             arch_params['Fclocal'] = float(value)
+        
+        # JUNIUS - add for update mode 10
+        elif param == 'Z':
+            arch_params['Z'] = int(value)
+        elif param == 'sneak_paths':
+            arch_params['sneak_paths'] = int(value)
+        elif param == 'Fc_ad':
+            arch_params['Fc_ad'] = float(value)
+
         elif param == 'Rsel':
             arch_params['Rsel'] = value
         elif param == 'Rfb':
@@ -653,6 +662,12 @@ def load_arch_params(filename):
             print "ERROR: Did not find architecture parameter " + param + " in " + filename
             sys.exit()
     
+    # JUNIUS - check additional parameters for update mode 10
+    if arch_params['updates'] == 10:
+        for param in ['Z', 'sneak_paths', 'Fc_ad']:
+            if param not in arch_params:
+                print "ERROR: Did not find architecture parameter " + param + " in " + filename + " (required for update mode 10)"
+
     # Check architecture parameters to make sure that they are valid
     check_arch_params(arch_params, filename)
 
@@ -927,7 +942,14 @@ def check_arch_params (arch_params, filename):
     if not (arch_params['updates'] in (0, 1, 2, 3, 4, 10)): #JUNIUS - add mode 10 for LUT skipping
         print_error (str(arch_params['updates']), "updates", filename)      
 
-
+    # JUNIUS - check mode 10 parameters
+    if arch_params['updates'] == 10:
+        if arch_params['Z'] <= 0:
+            print_error(str(arch_params['Z']), "Z", filename)
+        if arch_params['sneak_paths'] <= 0 or arch_params['sneak_paths'] > arch_params['I']:
+            print_error(str(arch_params['sneak_paths']), "sneak_paths", filename)
+        if arch_params['Fc_ad'] <= 0.0 or arch_params['Fc_ad'] > 1.0:
+            print_error(str(arch_params['Fc_ad']), "Fc_ad", filename)
 
 def print_error(value, argument, filename, msg = ""):
     print "ERROR: Invalid value (" + value + ") for " + argument + " in " + filename + " " + msg

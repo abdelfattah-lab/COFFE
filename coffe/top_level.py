@@ -156,7 +156,7 @@ def generate_local_mux_top(mux_name):
     # Change to directory    
     os.chdir(mux_name)
     
-    routing_name = mux_name.replace('mux', 'routing')
+    routing_name = 'local_routing'
 
     connection_block_filename = mux_name + ".sp"
     local_mux_file = open(connection_block_filename, 'w')

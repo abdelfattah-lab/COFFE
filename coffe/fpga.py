@@ -99,7 +99,8 @@ class _Specs:
     """ General FPGA specs. """
  
     def __init__(self, arch_params_dict, quick_mode_threshold):
-        
+        self.updates = arch_params_dict['updates']
+
         # FPGA architecture specs
         self.N                       = arch_params_dict['N']
         self.K                       = arch_params_dict['K']
@@ -121,6 +122,11 @@ class _Specs:
         self.carry_chain_type        = arch_params_dict['carry_chain_type']
         self.FAs_per_flut            = arch_params_dict['FAs_per_flut']
 
+        # JUNIUS - adder direct mux spepcs (update mode 10)
+        if self.updates == 10:
+            self.Z              = arch_params_dict['Z']             # ALM adder direct inputs
+            self.sneak_paths    = arch_params_dict['sneak_paths']   # sneak paths available
+            self.Fc_ad          = arch_params_dict['Fc_ad']         # Fclocal of AD local muxes (w.r.t. sneak paths)
 
         # BRAM specs
         self.row_decoder_bits     = arch_params_dict['row_decoder_bits']
@@ -161,7 +167,6 @@ class _Specs:
         self.use_tgate              = arch_params_dict['use_tgate']
         self.use_finfet             = arch_params_dict['use_finfet']
 
-        self.updates                = arch_params_dict['updates']
         self.mult_size              = arch_params_dict['mult_size']
 
         
@@ -3168,9 +3173,9 @@ class _GeneralBLEOutputLoad:
 class _LocalRoutingWireLoad:
     """ Local routing wire load """
     
-    def __init__(self, I, N, K, num_ble_local_outputs, local_mux_l2_size, local_mux_implemented_size, name = "local_routing_wire_load"):
+    def __init__(self, I, N, K, num_ble_local_outputs, local_mux_l2_size, local_mux_implemented_size, Z = None, ad_local_mux_l2_size = None, ad_local_mux_implemented_size = None):
         # Name of this wire
-        self.name = name
+        self.name = "local_routing_wire_load"
         # How many LUT inputs are we assuming are used in this logic cluster? (%)
         self.lut_input_usage_assumption = 0.85
         # Total number of local mux inputs per wire
@@ -3195,14 +3200,24 @@ class _LocalRoutingWireLoad:
         self.local_mux_l2_size = local_mux_l2_size
         # Local mux implemented size
         self.local_mux_implemented_size = local_mux_implemented_size
-    
+
+        # JUNIUS - add adder direct local mux L2 and implemented size (update mode 10)
+        self.Z = Z
+        self.ad_local_mux_l2_size = ad_local_mux_l2_size
+        self.ad_local_mux_implemented_size = ad_local_mux_implemented_size
 
     def generate(self, subcircuit_filename):
         print "Generating " + self.name
         # Compute load (number of on/partial/off per wire)
         self._compute_load()
+
+        # JUNIUS - compute load for adder_direct_local_mux (update mode 10)
+        nums_adder_direct = None
+        if not self.Z is None and not self.ad_local_mux_implemented_size is None and not self.ad_local_mux_l2_size is None:
+            nums_adder_direct = self._compute_load_ad()
+
         # Generate SPICE deck
-        self.wire_names = load_subcircuits.local_routing_load_generate(subcircuit_filename, self.on_inputs_per_wire, self.partial_inputs_per_wire, self.off_inputs_per_wire, name=self.name)
+        self.wire_names = load_subcircuits.local_routing_load_generate(subcircuit_filename, self.on_inputs_per_wire, self.partial_inputs_per_wire, self.off_inputs_per_wire, name=self.name, nums_adder_direct=nums_adder_direct)
     
     
     def update_wires(self, width_dict, wire_lengths, wire_layers, local_routing_wire_load_length):
@@ -3247,7 +3262,36 @@ class _LocalRoutingWireLoad:
         
         # Number of off inputs is simply the difference
         self.off_inputs_per_wire = self.mux_inputs_per_wire - self.on_inputs_per_wire - self.partial_inputs_per_wire
+
+    # JUNIUS - add load computation for adder direct local mux (update mode 10)
+    def _compute_load_ad(self):
+        """ Compute the load on a local routing wire for adder direct local mux (number of on/partial/off) """
         
+        # The first thing we are going to compute is how many local mux inputs are connected to a local routing wire
+        # This is a function of local_mux size, N, K, I and Ofb
+        num_local_routing_wires = self.I+self.N*self.num_ble_local_outputs
+        mux_inputs_per_wire = self.ad_local_mux_implemented_size*self.N*self.Z/num_local_routing_wires
+        
+        # Now we compute how many "on" inputs are connected to each routing wire
+        # This is a funtion of lut input usage, number of lut inputs and number of local routing wires
+        num_local_muxes_used = self.lut_input_usage_assumption*self.N*self.Z
+        on_inputs_per_wire = int(num_local_muxes_used/num_local_routing_wires)
+        # We want to model for the case where at least one "on" input is connected to the local wire, so make sure it's at least 1
+        if on_inputs_per_wire < 1:
+            on_inputs_per_wire = 1
+        
+        # Now we compute how many partially on muxes are connected to each wire
+        # The number of partially on muxes is equal to (level2_size - 1)*num_local_muxes_used/num_local_routing_wire
+        # We can figure out the number of muxes used by using the "on" assumption and the number of local routing wires.
+        partial_inputs_per_wire = int((self.ad_local_mux_l2_size - 1.0)*num_local_muxes_used/num_local_routing_wires)
+        # Make it at least 1
+        if partial_inputs_per_wire < 1:
+            partial_inputs_per_wire = 1
+        
+        # Number of off inputs is simply the difference
+        off_inputs_per_wire = mux_inputs_per_wire - on_inputs_per_wire - partial_inputs_per_wire
+
+        return on_inputs_per_wire, partial_inputs_per_wire, off_inputs_per_wire
 
 class _LogicCluster(_CompoundCircuit):
     
@@ -3269,30 +3313,31 @@ class _LogicCluster(_CompoundCircuit):
         # Adding the local mux subcircuit to the subcircuits dictionary
         self.subcircuits[self.local_mux.name] = self.local_mux
 
-        # Create local routing wire load object
-        self.local_routing_wire_load = _LocalRoutingWireLoad(specs.I, specs.N, specs.K, 
-            specs.num_ble_local_outputs, self.local_mux.level2_size, self.local_mux.implemented_size)
-        # Adding the local routing wire load to the loads dictionary
-        self.loads[self.local_routing_wire_load.name] = self.local_routing_wire_load
 
         #JUNIUS - add local crossbar for LUT skipping (update mode 10)
+        adder_direct_inputs = None
+        adder_direct_local_mux_l2_size = None
+        adder_direct_local_mux_implemented_size = None
         if specs.updates == 10:
             # Create local mux object
-            adder_sneak_paths = 20 # number of sneak paths used for adder-adder
-            adder_direct_inputs = 4 # number of input pins connected directly to the FLUT CC Mux
-            adder_direct_local_mux_size_required = int(adder_sneak_paths * specs.Fclocal)
+            adder_direct_inputs = specs.Z
+            adder_direct_local_mux_size_required = int(specs.sneak_paths * specs.Fc_ad)
             num_adder_direct_local_mux_per_tile = specs.N * adder_direct_inputs
             self.adder_direct_local_mux = _LocalMUX(adder_direct_local_mux_size_required, num_adder_direct_local_mux_per_tile, specs.use_tgate, name = 'adder_direct_local_mux')
             # Adding the local mux subcircuit to the subcircuits dictionary
             self.subcircuits[self.adder_direct_local_mux.name] = self.adder_direct_local_mux
 
-            # Create local routing wire load object
-            self.adder_direct_local_routing_wire_load = _LocalRoutingWireLoad(adder_sneak_paths, specs.N, adder_direct_inputs, 
-                specs.num_ble_local_outputs, self.adder_direct_local_mux.level2_size, self.adder_direct_local_mux.implemented_size,
-                name="adder_direct_local_routing_wire_load")
-            # Adding the local routing wire load to the loads dictionary
-            self.loads[self.adder_direct_local_routing_wire_load.name] = self.adder_direct_local_routing_wire_load
+            # set L2 and implemented size for local routing wire load
+            adder_direct_local_mux_l2_size = self.adder_direct_local_mux.level2_size
+            adder_direct_local_mux_implemented_size = self.adder_direct_local_mux.implemented_size
             
+        # Create local routing wire load object
+        self.local_routing_wire_load = _LocalRoutingWireLoad(specs.I, specs.N, specs.K, 
+            specs.num_ble_local_outputs, self.local_mux.level2_size, self.local_mux.implemented_size,
+            adder_direct_inputs, adder_direct_local_mux_l2_size, adder_direct_local_mux_implemented_size)
+        # Adding the local routing wire load to the loads dictionary
+        self.loads[self.local_routing_wire_load.name] = self.local_routing_wire_load
+
         if not specs.updates:
             # Create local BLE output load object
             self.local_ble_output_load = _LocalBLEOutputLoad()
@@ -3347,9 +3392,7 @@ class _LogicCluster(_CompoundCircuit):
             self.local_ble_output_load.update_wires(width_dict, wire_lengths, wire_layers, ble_ic_dis)
         elif self.updates == 10:
             #JUNIUS - update adder direct local MUX in LUT skip (mode 10)
-            self.adder_direct_local_mux.update_wires(width_dict, wire_lengths, wire_layers, ic_ratio)
-            self.adder_direct_local_routing_wire_load.update_wires(width_dict, wire_lengths, wire_layers, local_routing_wire_load_length)
-        
+            self.adder_direct_local_mux.update_wires(width_dict, wire_lengths, wire_layers, ic_ratio)        
         
     def print_details(self, report_file):
         """ Print the details of all the subcircuits """
